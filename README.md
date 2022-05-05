@@ -809,18 +809,204 @@ wordcount /input /output
 #### 7）查看日志
 （1）历史服务器地址  
 http://hadoop102:19888/jobhistory  
-（2）历史任务列表  
-（3）查看任务运行日志  
+（2）历史任务列表   
+![](https://github.com/Sun-C/Hadoop/blob/main/tmp/hadoojoblist.png)  
+（3）查看任务运行日志    
+![](https://github.com/Sun-C/Hadoop/blob/main/tmp/runingjob.png)  
 （4）运行日志详情  
-
-
-
-
-
-
-
-
-
-
+![](https://github.com/Sun-C/Hadoop/blob/main/tmp/jobresult.png)  
+### 3.2.8 集群启动/停止方式总结
+#### 1）各个模块分开启动/停止（配置 ssh 是前提）常用
+（1）整体启动/停止 HDFS  
+`start-dfs.sh/stop-dfs.sh`  
+（2）整体启动/停止 YARN  
+`start-yarn.sh/stop-yarn.sh`  
+#### 2）各个服务组件逐一启动/停止
+（1）分别启动/停止 HDFS 组件  
+`hdfs --daemon start/stop namenode/datanode/secondarynamenode`  
+（2）启动/停止 YARN  
+`yarn --daemon start/stop resourcemanager/nodemanager`  
+### 3.2.9 编写 Hadoop 集群常用脚本
+#### 1）Hadoop 集群启停脚本（包含 HDFS，Yarn，Historyserver）：myhadoop.sh
+```
+[atguigu@hadoop102 ~]$ cd /home/atguigu/bin
+[atguigu@hadoop102 bin]$ vim myhadoop.sh
+```
+➢ 输入如下内容  
+```
+#!/bin/bash
+if [ $# -lt 1 ]
+then
+ echo "No Args Input..."
+ exit ;
+fi
+case $1 in
+"start")
+ echo " =================== 启动 hadoop 集群 ==================="
+ echo " --------------- 启动 hdfs ---------------"
+ ssh hadoop102 "/opt/module/hadoop-3.1.3/sbin/start-dfs.sh"
+ echo " --------------- 启动 yarn ---------------"
+ssh hadoop103 "/opt/module/hadoop-3.1.3/sbin/start-yarn.sh"
+ echo " --------------- 启动 historyserver ---------------"
+ ssh hadoop102 "/opt/module/hadoop-3.1.3/bin/mapred --daemon start
+historyserver"
+;;
+"stop")
+ echo " =================== 关闭 hadoop 集群 ==================="
+ echo " --------------- 关闭 historyserver ---------------"
+ ssh hadoop102 "/opt/module/hadoop-3.1.3/bin/mapred --daemon stop
+historyserver"
+ echo " --------------- 关闭 yarn ---------------"
+ ssh hadoop103 "/opt/module/hadoop-3.1.3/sbin/stop-yarn.sh"
+ echo " --------------- 关闭 hdfs ---------------"
+ ssh hadoop102 "/opt/module/hadoop-3.1.3/sbin/stop-dfs.sh"
+;;
+*)
+ echo "Input Args Error..."
+;;
+esac
+``` 
+➢ 保存后退出，然后赋予脚本执行权限  
+`[atguigu@hadoop102 bin]$ chmod +x myhadoop.sh`
+#### 2）查看三台服务器 Java 进程脚本：jpsall
+```
+[atguigu@hadoop102 ~]$ cd /home/atguigu/bin
+[atguigu@hadoop102 bin]$ vim jpsall
+```
+➢ 输入如下内容  
+```
+#!/bin/bash
+for host in hadoop102 hadoop103 hadoop104
+do
+ echo =============== $host ===============
+ ssh $host jps
+done
+```
+➢ 保存后退出，然后赋予脚本执行权限  
+`[atguigu@hadoop102 bin]$ chmod +x jpsall`  
+#### 3）分发/home/atguigu/bin 目录，保证自定义脚本在三台机器上都可以使用
+`[atguigu@hadoop102 ~]$ xsync /home/atguigu/bin/`  
+#### 3.2.10 常用端口号说明  
+```
+端口名称                     |  Hadoop2.x    |  Hadoop3.x    
+----------------------------------------------------------------  
+NameNode 内部通信端口         | 8020 / 9000   | 8020 / 9000/9820    
+NameNode HTTP UI             | 50070         | 9870   
+----------------------------------------------------------------  
+MapReduce 查看执行任务端口   |   8088        | 8088    
+----------------------------------------------------------------  
+历史服务器通信端口            |   19888       |  19888   
+----------------------------------------------------------------  
+```
+### 3.2.11 集群时间同步
+如果服务器在公网环境（能连接外网），可以不采用集群时间同步，因为服务器会定期
+和公网时间进行校准；  
+如果服务器在内网环境，必须要配置集群时间同步，否则时间久了，会产生时间偏差，
+导致集群执行任务时间不同步。  
+#### 1）需求
+找一个机器，作为时间服务器，所有的机器与这台集群时间进行定时的同步，生产环境
+根据任务对时间的准确程度要求周期同步。测试环境为了尽快看到效果，采用 1 分钟同步一
+次。  
+![](https://github.com/Sun-C/Hadoop/blob/main/tmp/timesync.png)  
+#### 2）时间服务器配置（必须 root 用户）
+（1）查看所有节点 ntpd 服务状态和开机自启动状态  
+```
+[atguigu@hadoop102 ~]$ sudo systemctl status ntpd
+[atguigu@hadoop102 ~]$ sudo systemctl start ntpd
+[atguigu@hadoop102 ~]$ sudo systemctl is-enabled ntpd
+```
+（2）修改 hadoop102 的 ntp.conf 配置文件  
+`[atguigu@hadoop102 ~]$ sudo vim /etc/ntp.conf`  
+修改内容如下  
+（a）修改 1（授权 192.168.10.0-192.168.10.255 网段上的所有机器可以从这台机器上查
+询和同步时间）  
+`#restrict 192.168.10.0 mask 255.255.255.0 nomodify notrap` 
+为 `restrict 192.168.10.0 mask 255.255.255.0 nomodify notrap`  
+（b）修改 2（集群在局域网中，不使用其他互联网上的时间）  
+```
+server 0.centos.pool.ntp.org iburst
+server 1.centos.pool.ntp.org iburst
+server 2.centos.pool.ntp.org iburst
+server 3.centos.pool.ntp.org iburst
+```
+为
+```
+#server 0.centos.pool.ntp.org iburst
+#server 1.centos.pool.ntp.org iburst
+#server 2.centos.pool.ntp.org iburst
+#server 3.centos.pool.ntp.org iburst
+```
+（c）添加 3（当该节点丢失网络连接，依然可以采用本地时间作为时间服务器为集群中的其他节点提供时间同步）  
+```
+server 127.127.1.0
+fudge 127.127.1.0 stratum 10
+```
+（3）修改 hadoop102 的/etc/sysconfig/ntpd 文件  
+`[atguigu@hadoop102 ~]$ sudo vim /etc/sysconfig/ntpd`  
+增加内容如下（让硬件时间与系统时间一起同步）  
+`SYNC_HWCLOCK=yes`  
+（4）重新启动 ntpd 服务  
+`[atguigu@hadoop102 ~]$ sudo systemctl start ntpd`  
+（5）设置 ntpd 服务开机启动  
+`[atguigu@hadoop102 ~]$ sudo systemctl enable ntpd`  
+#### 3）其他机器配置（必须 root 用户）
+（1）关闭所有节点上 ntp 服务和自启动  
+```
+[atguigu@hadoop103 ~]$ sudo systemctl stop ntpd
+[atguigu@hadoop103 ~]$ sudo systemctl disable ntpd
+[atguigu@hadoop104 ~]$ sudo systemctl stop ntpd
+[atguigu@hadoop104 ~]$ sudo systemctl disable ntpd
+```
+（2）在其他机器配置 1 分钟与时间服务器同步一次  
+`[atguigu@hadoop103 ~]$ sudo crontab -e`  
+编写定时任务如下：  
+```
+*/1 * * * * /usr/sbin/ntpdate hadoop102
+``` 
+（3）修改任意机器时间  
+`[atguigu@hadoop103 ~]$ sudo date -s "2021-9-11 11:11:11"`  
+（4）1 分钟后查看机器是否与时间服务器同步  
+`[atguigu@hadoop103 ~]$ sudo date`  
+# 第 4 章 常见错误及解决方案
+## 1）防火墙没关闭、或者没有启动 YARN
+`INFO client.RMProxy: Connecting to ResourceManager at hadoop108/192.168.10.108:8032`  
+## 2）主机名称配置错误  
+## 3）IP 地址配置错误
+## 4）ssh 没有配置好
+## 5）root 用户和 atguigu 两个用户启动集群不统一
+## 6）配置文件修改不细心
+## 7）不识别主机名称
+```
+java.net.UnknownHostException: hadoop102: hadoop102
+ at
+java.net.InetAddress.getLocalHost(InetAddress.java:1475)
+ at
+org.apache.hadoop.mapreduce.JobSubmitter.submitJobInternal(Job
+Submitter.java:146)
+ at org.apache.hadoop.mapreduce.Job$10.run(Job.java:1290)
+ at org.apache.hadoop.mapreduce.Job$10.run(Job.java:1287)
+ at java.security.AccessController.doPrivileged(Native
+Method)
+at javax.security.auth.Subject.doAs(Subject.java:415)
+```
+解决办法：  
+（1）在/etc/hosts 文件中添加 192.168.10.102 hadoop102  
+（2）主机名称不要起 hadoop hadoop000 等特殊名称  
+## 8）DataNode 和 NameNode 进程同时只能工作一个。   
+![](https://github.com/Sun-C/Hadoop/blob/main/tmp/synctime.png)  
+## 9）执行命令不生效，粘贴 Word 中命令时，遇到-和长–没区分开。导致命令失效
+解决办法：尽量不要粘贴 Word 中代码。  
+## 10）jps 发现进程已经没有，但是重新启动集群，提示进程已经开启。
+原因是在 Linux 的根目录下/tmp 目录中存在启动的进程临时文件，将集群相关进程删
+除掉，再重新启动集群。  
+## 11）jps 不生效
+原因：全局变量 hadoop java 没有生效。解决办法：需要 source /etc/profile 文件。
+12）8088 端口连接不上  
+`[atguigu@hadoop102 桌面]$ cat /etc/hosts`  
+注释掉如下代码
+```
+#127.0.0.1 localhost localhost.localdomain localhost4 localhost4.localdomain4
+#::1 hadoop102
+```
 
 
