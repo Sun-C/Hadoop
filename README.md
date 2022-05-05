@@ -760,7 +760,7 @@ wordcount /input /output
 http://hadoop102:19888/jobhistory  
 ### 3.2.7 配置日志的聚集
 日志聚集概念：应用运行完成以后，将程序运行日志信息上传到 HDFS 系统上。    
-![]
+![](https://github.com/Sun-C/Hadoop/blob/main/tmp/loghdfs.png?raw=true)  
 日志聚集功能好处：可以方便的查看到程序运行详情，方便开发调试。    
 注意：开启日志聚集功能，需要重新启动 NodeManager 、ResourceManager 和
 HistoryServer。  
@@ -793,7 +793,25 @@ HistoryServer。
 [atguigu@hadoop103 hadoop-3.1.3]$ mapred --daemon stop
 historyserver
 ```
-
+#### 4）启动 NodeManager 、ResourceManage 和 HistoryServer
+```
+[atguigu@hadoop103 ~]$ start-yarn.sh
+[atguigu@hadoop102 ~]$ mapred --daemon start historyserver
+```
+#### 5）删除 HDFS 上已经存在的输出文件
+`[atguigu@hadoop102 ~]$ hadoop fs -rm -r /output`  
+#### 6）执行 WordCount 程序
+```
+[atguigu@hadoop102 hadoop-3.1.3]$ hadoop jar
+share/hadoop/mapreduce/hadoop-mapreduce-examples-3.1.3.jar
+wordcount /input /output
+```
+#### 7）查看日志
+（1）历史服务器地址  
+http://hadoop102:19888/jobhistory  
+（2）历史任务列表  
+（3）查看任务运行日志  
+（4）运行日志详情  
 
 
 
