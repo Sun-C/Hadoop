@@ -102,7 +102,7 @@ TODO:
 注：Extra Packages for Enterprise Linux 是为“红帽系”的操作系统提供额外的软件包，
 适用于 RHEL、CentOS 和 Scientific Linux。相当于是一个软件仓库，大多数 rpm 包在官方
 repository 中是找不到的）  
-` [root@hadoop100 ~]# yum install -y epel-release `
+` [root@hadoop100 ~]# yum install -y epel-release `  
 （3）注意：如果 Linux 安装的是最小系统版，还需要安装如下工具；如果安装的是 Linux
 桌面标准版，不需要执行如下操作  
 ➢ net-tool：工具包集合，包含 ifconfig 等命令  
