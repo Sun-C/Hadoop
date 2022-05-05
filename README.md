@@ -788,12 +788,11 @@ HistoryServer。
 </property>
 ```
 #### 2）分发配置
-`[atguigu@hadoop102 hadoop]$ xsync $HADOOP_HOME/etc/hadoop/yarnsite.xml`  
+`[atguigu@hadoop102 hadoop]$ xsync $HADOOP_HOME/etc/hadoop/yarn-site.xml`  
 #### 3）关闭 NodeManager 、ResourceManager 和 HistoryServer
 ```
 [atguigu@hadoop103 hadoop-3.1.3]$ sbin/stop-yarn.sh
-[atguigu@hadoop103 hadoop-3.1.3]$ mapred --daemon stop
-historyserver
+[atguigu@hadoop103 hadoop-3.1.3]$ mapred --daemon stop historyserver
 ```
 #### 4）启动 NodeManager 、ResourceManage 和 HistoryServer
 ```
@@ -805,8 +804,7 @@ historyserver
 #### 6）执行 WordCount 程序
 ```
 [atguigu@hadoop102 hadoop-3.1.3]$ hadoop jar
-share/hadoop/mapreduce/hadoop-mapreduce-examples-3.1.3.jar
-wordcount /input /output
+share/hadoop/mapreduce/hadoop-mapreduce-examples-3.1.3.jar wordcount /input /output
 ```
 #### 7）查看日志
 （1）历史服务器地址  
