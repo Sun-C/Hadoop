@@ -544,10 +544,12 @@ authorized_keys: 存放授权过的无密登录服务器公钥
 ➢ NameNode 和 SecondaryNameNode 不要安装在同一台服务器  
 ➢ ResourceManager 也很消耗内存，不要和 NameNode、SecondaryNameNode 配置在  
 同一台机器上。  
-     | hadoop102 | hadoop103 | hadoop104  
- --- | --- | --- | ---  
-HDFS | NameNode DataNode | DataNode | SecondaryNameNode DataNode  
-YARN | NodeManager | ResourceManager NodeManager | NodeManager  
+```
+     |  hadoop102         | hadoop103                   | hadoop104  
+ --- |     ---            |    ---                      | ---  
+HDFS |  NameNode DataNode | DataNode                    | SecondaryNameNode DataNode  
+YARN |  NodeManager       | ResourceManager NodeManager | NodeManager  
+```
 #### 2）配置文件说明 
 Hadoop 配置文件分两类：默认配置文件和自定义配置文件，只有用户想修改某一默认配置值时，才需要修改自定义配置文件，更改相应属性值。  
 （1）默认配置文件：  
